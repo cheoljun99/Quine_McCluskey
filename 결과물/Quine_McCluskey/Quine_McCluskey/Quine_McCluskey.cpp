@@ -1,33 +1,262 @@
 #include<iostream>
 #include<fstream>
-using namespace std;
-int FindPrimeImplicant(char ** InputMinterm, int input, char **Tureminterm);//퀸맥클러스키 방법에서 prime Implicant를 찾는 함수이며 인자로는 InputMinterm 배열과, input의 개수, Tureminterm 배열을 갖는다.
-int SumOfProduct(char **prr, int input, int termnumber);//prime implicnat를 통해 sum of product를 구하는 함수이며 SOP의 cost를 구할 수 있는 함수이다. 인자로 prime implicant를 저장하고 있는 prr배열과 prime implicant의 갯수인 termnumber변수, 인풋의 갯수인 input변수,Tureminterm 배열를 갖는다.  
+#include <vector>
+#include <algorithm>
+#include<string>
 
-int SumOfProduct(char **prr, int input, int termnumber)
+
+using namespace std;
+void FindPrimeImplicant(char ** InputMinterm, int input, char **Tureminterm);//퀸맥클러스키 방법에서 prime Implicant를 찾는 함수이며 인자로는 InputMinterm 배열과, input의 개수, Tureminterm 배열을 갖는다.
+int SumOfProduct(char **prr, int input, int termnumber, char** Tureminterm);//prime implicnat를 통해 sum of product를 구하는 함수이며 SOP의 cost를 구할 수 있는 함수이다. 인자로 prime implicant를 저장하고 있는 prr배열과 prime implicant의 갯수인 termnumber변수, 인풋의 갯수인 input변수,Tureminterm 배열를 갖는다.  
+void FindEssentialPrimeImplicant(char** prr, int input, int prime_inplicant_number, char** Tureminterm,int Tureminterm_number);
+void Output_Result(char** Best_Essential_Prime_Implicant, int Best_Cost);
+
+
+class Best_Essential_Prime_Implicant_And_Best_Cost
 {
-	/*모든 prime implicant만 가지고 SOP를 만드는 것이 아니라 필수주항찾고 필수주항과 함께 필수 주항이 커버하지 못하는 임플리컨트를 만족하는 prime implicant을 통해
-	SOP를 구성해야한다. 하지만 이프로그램은 필수주항을 찾는 알고리즘을 구성하지 못하였기 때문에 오로지 prime implicant만을 가지고 SOP를 구성하였다. */
-	/*이는 이프로그램의 문제점이며 최소하된 SOP와 cost가 나오지 못할 가능성이 있다.*/
+public:
+	char* Best_Essential_Prime_Implicant[1000];
+	int Best_Cost;
+	
+};
+
+void Output_Result(char** Best_Essential_Prime_Implicant, int Best_Cost)
+{
+	/*가장 베스트 필수 주항과 베스트 코스트를 받아 파일 및 cmd에 출력하는 함수*/
 	ofstream fout;//아웃풋스트림 클래스 변수 fout을 선언한다.
 	fout.open("result.txt");//"result.txt"파일을 연다.
 	if (!fout.is_open())
 	{
 		cout << "파일을 열지 못하였습니다." << endl;//파일을 여는것에 실패한경우를 위한 예외처리
-		return 0;
+		return;
 	}
 	cout << "result: ";
 	cout << endl;
-	for (int i = 0; *prr[i] != '\0'; i++)
+	for (int i = 0; *Best_Essential_Prime_Implicant[i] != '\0'; i++)
 	{
-		cout << prr[i] << endl;
+		cout << Best_Essential_Prime_Implicant[i] << endl;
 	}
 	cout << endl << endl << endl;
+	for (int i = 0; *Best_Essential_Prime_Implicant[i] != '\0'; i++)
+	{
+		fout << Best_Essential_Prime_Implicant[i] << endl;
+	}
+	cout << "Cost (# of transistors): ";
+	cout << Best_Cost << endl;
+	fout << endl << endl << endl;
+	fout << "Cost (# of transistors): " << Best_Cost;
+	cout << "프로그램 성공적으로 작동하였습니다. 결과파일을 열어보십시오." << endl;
+	return;
+
+}
+
+void FindEssentialPrimeImplicant(char** prr, int input, int prime_inplicant_number, char** Tureminterm, int Tureminterm_number)
+{
+	//cout << "prime_inplicant_number : " << prime_inplicant_number << endl;
+	//cout << "Tureminterm_number : " << Tureminterm_number << endl;
+
+	
+
+	Best_Essential_Prime_Implicant_And_Best_Cost Best_Boolean_Expressions;
+
+	for (int i = 0; i < 1000; i++)
+	{
+		Best_Boolean_Expressions.Best_Essential_Prime_Implicant[i] = new char[input + 1];//동적할당
+
+	}
+	Best_Boolean_Expressions.Best_Cost = 0;
+
+	int** e_pls_arr = new int* [prime_inplicant_number]; //행의 크기가 prime_inplicant_number인 이차원 배열
+	for (int i = 0; i < prime_inplicant_number; i++) //각각의 행에 길이가 Tureminterm_number인 열을 할당
+	{
+		e_pls_arr[i] = new int[Tureminterm_number];
+		memset(e_pls_arr[i], 0, sizeof(int)*Tureminterm_number);
+	}
+	
+
 	for (int i = 0; *prr[i] != '\0'; i++)
 	{
-		fout << prr[i] << endl;
+		for (int k = 0; *Tureminterm[k] != '\0'; k++)
+		{
+			int checker = 0;
+		
+			for (int j = 0; j < input; j++){
+
+				if (prr[i][j] == Tureminterm[k][j]|| prr[i][j] == '_')
+				{
+					checker++;
+				
+				}
+		
+			}
+			if (checker == input)
+			{
+				e_pls_arr[i][k] = 1;
+			}
+		}
 	}
+
+	
+
+	for (int cnt = 1; cnt <= prime_inplicant_number; cnt++)
+	{
+		int exit_count = 0;
+		vector<int> v(prime_inplicant_number);
+		for (int i = 0; i < prime_inplicant_number; i++) {
+			v[i] = i;
+		}
+		vector<bool> visited(prime_inplicant_number, true);
+
+		int* table_checker = new int[Tureminterm_number];
+		int* table_saver = new int[cnt];
+		for (int i = 0; i < v.size() - cnt; i++)
+		{
+			visited[i] = false;
+		}
+
+		do {
+			
+			memset(table_checker, 0, sizeof(int) * Tureminterm_number);
+			memset(table_saver, 0, sizeof(int) * cnt);
+			int table_saver_count = 0;
+			
+
+			for (int i = 0; i < v.size(); i++) {
+				if (visited[i])
+				{
+					//cout << v[i] << " ";
+			
+					table_saver[table_saver_count] = v[i];
+					table_saver_count++;
+					for (int j = 0; j < Tureminterm_number; j++)
+					{
+						if (table_checker[j] != 1)
+						{
+							table_checker[j] = e_pls_arr[v[i]][j];
+						}
+
+
+					}
+
+				}
+
+			}
+			int table_checker_count = 0;
+			for (int i = 0; i < Tureminterm_number; i++)
+			{
+				table_checker_count += table_checker[i];
+			}
+
+			if (table_checker_count == Tureminterm_number)
+			{
+				exit_count = 1;
+				char* essential_prime_implicant[1000];// InputMinterm을 저장하기 위한 char형 포인터 배열 essential_prime_implicant을 선언한다.
+				for (int i = 0; i < 1000; i++)
+				{
+					essential_prime_implicant[i] = new char[input + 1];//동적할당
+
+				}
+
+				for (int i = 0; i < cnt; i++)//배열 essential_prime_implicant에 InputMinterm을 저장한다 .
+				{
+					strcpy(essential_prime_implicant[i],prr[table_saver[i]]);
+
+					*essential_prime_implicant[i + 1] = 0;
+
+
+
+				}
+				int SumOfProduct_Checker = 0;
+				
+				SumOfProduct_Checker =SumOfProduct(essential_prime_implicant, input, cnt, Tureminterm);
+
+				if (Best_Boolean_Expressions.Best_Cost == 0)
+				{
+					Best_Boolean_Expressions.Best_Cost = SumOfProduct_Checker;
+
+					for (int i = 0;  i<cnt; i++)//배열 prr에 InputMinterm을 저장한다 .
+					{
+						
+						strcpy(Best_Boolean_Expressions.Best_Essential_Prime_Implicant[i],essential_prime_implicant[i]);
+						*Best_Boolean_Expressions.Best_Essential_Prime_Implicant[i + 1] = 0;
+
+
+
+					}
+					
+
+				}
+				else if (Best_Boolean_Expressions.Best_Cost >= SumOfProduct_Checker)
+				{
+					Best_Boolean_Expressions.Best_Cost = SumOfProduct_Checker;
+
+					for (int i = 0; i < cnt; i++)//배열 prr에 InputMinterm을 저장한다 .
+					{
+						strcpy(Best_Boolean_Expressions.Best_Essential_Prime_Implicant[i], essential_prime_implicant[i]);
+						*Best_Boolean_Expressions.Best_Essential_Prime_Implicant[i + 1] = 0;
+
+
+
+
+					}
+				}
+
+				for (int i = 0; i < 1000; i++)
+				{
+					delete[] essential_prime_implicant[i]; //동적할당해제
+
+				}
+				
+
+
+
+			}
+			//puts("");
+		} while (next_permutation(visited.begin(), visited.end()));
+		
+		delete[] table_checker;
+		delete[] table_saver;
+		if (exit_count == 1)
+		{
+			break;
+		}
+		
+	}
+	
+	Output_Result(Best_Boolean_Expressions.Best_Essential_Prime_Implicant, Best_Boolean_Expressions.Best_Cost);
+
+	for (int i = 0; i < 1000; i++)
+	{
+		delete[] Best_Boolean_Expressions.Best_Essential_Prime_Implicant[i];//동적할당해제
+		delete[] prr[i];//동적할당해제
+		delete[] Tureminterm[i];
+
+	}
+	for (int i = 0; i < prime_inplicant_number; i++) //각각의 행에 길이가 Tureminterm_number인 열을 할당
+	{
+		delete[] e_pls_arr[i];
+	}
+	delete[] e_pls_arr;
+	return;
+}
+
+int SumOfProduct(char** essential_prime_implicant , int input, int termnumber, char** Tureminterm)
+{
+	
 	/*아래는 SOP의 cost를 계산하는 과정이다.*/
+
+	int* cost_table = new int [input]; //행의 크기가 prime_inplicant_number인 이차원 배열
+	memset(cost_table, -1, sizeof(int)*input);
+
+	/*
+	for (int j = 0; j < input; j++)
+	{
+		cout << cost_table[j] << " ";
+	}
+	cout << endl;
+	*/
+
+
 	int cost = 0;
 	for (int i = 0; i < termnumber; i++)
 	{
@@ -36,13 +265,23 @@ int SumOfProduct(char **prr, int input, int termnumber)
 		for (int j = 0; j < input; j++)
 		{
 
-			if (prr[i][j] != '_'&&prr[i][j] == '0')/*입력에 0있어 부정값이 입력으로 들어가면
+			if (essential_prime_implicant[i][j] != '_'&& essential_prime_implicant[i][j] == '0')/*입력에 0있어 부정값이 입력으로 들어가면
 												   인버터(트랜지스터2개)를 추가해주어야한다.*/
 			{
-				cost += 2;
-				inputnumber++;
+				if (cost_table[j] == -1)
+				{
+					cost += 2;
+					inputnumber++;
+					cost_table[j] = 0;
+
+				}
+				else
+				{
+					inputnumber++;
+				}
+				
 			}
-			else if (prr[i][j] != '_'&&prr[i][j] == '1')
+			else if (essential_prime_implicant[i][j] != '_'&& essential_prime_implicant[i][j] == '1')
 			{
 
 				inputnumber++;
@@ -60,7 +299,6 @@ int SumOfProduct(char **prr, int input, int termnumber)
 		{
 			cost += 2;//우리가 구하고자하는 것은 AND게이트임으로 NOT게이트(트랜지스터2개)를 추가하여야한다.
 		}
-
 	}
 	if (termnumber > 1)
 	{
@@ -71,14 +309,14 @@ int SumOfProduct(char **prr, int input, int termnumber)
 	if (termnumber > 1)
 	{
 		cost += 2;//우리가 구하고자하는 것은 OR게이트임으로 NOT게이트(트랜지스터2개)를 추가하여야한다.
-	}
-	cout << "Cost (# of transistors): ";
-	cout << cost << endl;
-	fout << endl << endl << endl;
-	fout << "Cost (# of transistors): " << cost;
+	};
+	delete [] cost_table;//동적할당 해제
+	return cost;
+
 }
-int FindPrimeImplicant(char ** InputMinterm, int input, char **Tureminterm)//퀸맥클러스키 방정식에서 prime Implicant를 찾는 함수이며 인자로는 InputMinterm 배열과, input의 개수, Tureminterm 배열을 같는다.
+void FindPrimeImplicant(char ** InputMinterm, int input, char **Tureminterm)//퀸맥클러스키 방정식에서 prime Implicant를 찾는 함수이며 인자로는 InputMinterm 배열과, input의 개수, Tureminterm 배열을 같는다.
 {
+	
 	int termnumber = 0;//함수를 연속적으로 실행시킬 것인데 그때마다 implicant의 항의 개수를 세어주는 변수이다.
 	for (int i = 0; *InputMinterm[i] != '\0'; i++)
 	{
@@ -93,14 +331,10 @@ int FindPrimeImplicant(char ** InputMinterm, int input, char **Tureminterm)//퀸�
 	}
 	for (int i = 0; *InputMinterm[i] != '\0'; i++)//배열 prr에 InputMinterm을 저장한다 .
 	{
-		prr[i] = InputMinterm[i];
-
+		strcpy(prr[i],InputMinterm[i]);
 		*prr[i + 1] = 0;
 
-
-
 	}
-
 	char * crr[1000];//해밍디스턴스가 1차이나는 문자열을 비교하여 디스턴스가 1차이나는 부분을 지워서 저장하기위한 배열을 선언한다.
 	for (int i = 0; i < 1000; i++)
 	{
@@ -166,7 +400,7 @@ int FindPrimeImplicant(char ** InputMinterm, int input, char **Tureminterm)//퀸�
 		}
 		if (x == 0)
 		{
-			rest[L] = InputMinterm[i];//해밍디스턴스가 1인 문자열을 찾지못한경우 대상이 되는 문자열을 rest배열에 넣습니다.
+			strcpy(rest[L],InputMinterm[i]);//해밍디스턴스가 1인 문자열을 찾지못한경우 대상이 되는 문자열을 rest배열에 넣습니다.
 			L++;
 
 		}
@@ -174,9 +408,21 @@ int FindPrimeImplicant(char ** InputMinterm, int input, char **Tureminterm)//퀸�
 	if (s == 0)//아무것도 해밍디스턴스차이가 1인 경우가 없는경우 그배열에 있는 문자열들은 prime inplicant입니다 고로 FindPrimeImplicant 함수를 종료시킵니다.
 			   //종료시키면서 SumOfProduct함수를 실행시킵니다.
 	{
+		int Tureminterm_number = 0;
+		for (int i = 0; *Tureminterm[i] != '\0'; i++)
+		{
+			/*InputMinterm[i] != '\0'일때까지 termnumber의 수를 증가시켜준다. */
+			Tureminterm_number = i + 1;
+		}
 
-		SumOfProduct(prr, input, termnumber);
-		return 0;
+		for (int i = 0; i < 1000; i++)
+		{
+			delete[] crr[i];//동적할당해제
+			delete[] rest[i];//동적할당해제
+			delete[] InputMinterm[i];//동적할당해제
+		}
+		FindEssentialPrimeImplicant(prr, input, termnumber, Tureminterm, Tureminterm_number);
+		return ;
 	}
 	for (int i = 0; *crr[i] != NULL; i++)//crr 배열에 있는 문자열 중에서 중복되는 것이 있을 수도 있기 때문에 지워주는 과정입니다.
 	{
@@ -208,18 +454,20 @@ int FindPrimeImplicant(char ** InputMinterm, int input, char **Tureminterm)//퀸�
 			pa++;
 		}
 	}
-
-	if (s != 0)/*해밍 디스턴스가 1인 경우가있는 경우 (프라임 임플리컨트들만 있는 문자열을 못 찾은 경우)
+	if (s != 0)
+	{
+		/*해밍 디스턴스가 1인 경우가있는 경우 (프라임 임플리컨트들만 있는 문자열을 못 찾은 경우)
 				prime implicant를 못찾은 경우 반복해서 FindPrimeImplicant를 실행시킵니다.
 				이 return 0는 main함수의 프로그램을 종료시키기위한 return 0로 가기위한 것 입니다.*/
-	{
+
+
 		FindPrimeImplicant(rest, input, Tureminterm);
 	}
 
 }
 int main()
 {
-	char *InputLine[1000];//파일에서 민텀을 입력받을 문자열을 저장할수있는 char형 포인터 배열를 선언합니다.
+	char *InputLine[1000];//파일에서 인풋 민텀을 입력받을 문자열을 저장할수있는 char형 포인터 배열를 선언합니다.
 	for (int i = 0; i < 1000; i++)
 	{
 		InputLine[i] = new char[10000];//문자열을 받기위해 동적할당합니다.
@@ -235,6 +483,11 @@ int main()
 	if (!fin.is_open())
 	{
 		cout << "파일을 열지 못하였습니다." << endl;//파일을 여는 것을 실패한경우 실행되는 예외처리 입니다.
+		for (int i = 0; i < 1000; i++)
+		{
+			delete[] InputLine[i];//해제
+			delete[] Tureminterm[i];//해제
+		}
 		return 0;
 	}
 	int i = 0;
@@ -247,20 +500,34 @@ int main()
 
 
 	}
-	input = InputLine[0][0] - '0';//char 형 포인터 배열 InputLine의 첫번째 행은 인풋의 개수 입니다.
+	
+	
+	input = atoi(InputLine[0]);//char 형 포인터 배열 InputLine의 첫번째 행은 인풋의 개수 입니다.
+
 	if (input == -48)
 	{
 		cout << "input의 갯수를 입력하지 않으셨습니다." << endl;//첫번째행이 비어있어 인풋의 개수를 알 수 없을 때 실행되는 예외처리입니다.
+		for (int i = 0; i < 1000; i++)
+		{
+			delete[] InputLine[i];//해제
+			delete[] Tureminterm[i];//해제
+		}
 		return 0;
 	}
+
 	if (InputLine[1][input + 2] != '\0')
 	{
 		cout << "입력파일의 형식이 올바르지 않습니다. 수정하십시오" << endl;
+		for (int i = 0; i < 1000; i++)
+		{
+			delete[] InputLine[i];//해제
+			delete[] Tureminterm[i];//해제
+		}
 		return 0;
 	}
 
 	int v = 0;
-	for (int i = 0; *InputLine[i] != 0; i++)/* InputLine의 [0]의 다음행들은 돈케어나 트루 민텀이고 입력받은 무자열은 예를 들면 d 0000의 형식을 가지는 데 계산의
+	for (int i = 0; *InputLine[i] != 0; i++)/* InputLine의 [0]의 다음행들은 돈케어나 트루 민텀이고 입력받은 문자열은 예를 들면 d 0000의 형식을 가지는 데 계산의
 											   편의를 위해 d혹은m과 띄어쓰기 공백하나를 지웁니다.*/
 	{
 		if (InputLine[i][0] == 'm')
@@ -274,6 +541,7 @@ int main()
 			v++;
 		}
 	}
+
 	int j = 1;
 	int termnumber = 0;
 	while (InputLine[j][0] == 'd' || InputLine[j][0] == 'm')//* 마찬가지로 true민텀을 저장한 TrueMinterm에서 영어 d와 띄어쓰기 공백하나를 지웁니다.
@@ -302,11 +570,27 @@ int main()
 			*InputMinterm[i + 1] = 0;
 		}
 	}
-	if (FindPrimeImplicant(InputMinterm, input, Tureminterm) == 0)//퀸맥클러스키 방정식에서 prime Implicant를 찾는 함수이며 인자로는 InputMinterm 배열과, input의 개수, Tureminterm 배열을 같는다.
-																//함수가 0을 반환하면 프로그램을 종료한다.
+	if (v == 0)
 	{
-		cout << "프로그램 성공적으로 작동하였습니다. 결과파일을 열어보십시오." << endl;
+		cout << "TrueMinterm이 존재하지 않습니다." << endl;
+		for (int i = 0; i < 1000; i++)
+		{
+			delete[] InputLine[i];//해제
+			delete[] Tureminterm[i];//해제
+			delete[] InputMinterm[i];//해제
+		}
 		return 0;
+
 	}
+	
+	FindPrimeImplicant(InputMinterm, input, Tureminterm);//퀸맥클러스키 방정식에서 prime Implicant를 찾는 함수이며 인자로는 InputMinterm 배열과, input의 개수, Tureminterm 배열을 같는다.
+
+
+	for (int i = 0; i < 1000; i++)
+	{
+		delete[] InputLine[i];//해제
+	}
+
+	return 0;
 
 }
